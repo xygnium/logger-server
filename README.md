@@ -9,6 +9,8 @@ The host-side server for the data loggers. Each logger pushes its readings over 
 
 The message formats are in [PROTOCOL.md](PROTOCOL.md). It is the shared reference for both firmware repos.
 
+To test the link with the ambient logger, see [TEST-AMBIENT.md](TEST-AMBIENT.md).
+
 ## Running
 
 ```bash

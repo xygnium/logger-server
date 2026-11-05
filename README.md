@@ -18,6 +18,21 @@ The message formats are in [PROTOCOL.md](PROTOCOL.md). It is the shared referenc
 
 It prints each message with its arrival time and sender, and replies `ack <UTC time>`. It doesn't store anything yet.
 
+### As a service on dev10
+
+`logger-server.service` runs it as a systemd user service, which starts at boot and restarts after a crash. It assumes the repo is cloned at `~/dev/github/logger-server`; edit the paths in the file if not. Stop any `udp_listener.py` started by hand first, since only one program can hold port 8080.
+
+```bash
+mkdir -p ~/.config/systemd/user
+cp logger-server.service ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now logger-server
+sudo loginctl enable-linger $USER     # start at boot, without a login
+journalctl --user -u logger-server -f # watch the output
+```
+
+After editing the copy in `~/.config/systemd/user/`, run `systemctl --user daemon-reload` and `systemctl --user restart logger-server`.
+
 ## Status
 
 - `udp_listener.py`, moved from `esp32-dev/ambient`, unchanged apart from its docstring.
@@ -37,9 +52,9 @@ It prints each message with its arrival time and sender, and replies `ack <UTC t
 
   `timestamp` is the reading's own UTC time. `data_type` names the measured quantity with its unit, such as `temperature_C`, `humidity_pct` or `pressure_hPa`. `status` is OK or fail. Operations select by time range, and readings from different loggers aren't time-aligned.
 - The loggers push and never listen.
+- The server runs on dev10 to start with, as a systemd user service.
 
 ## Open
 
 - Whether each push carries every sample since the last ack, so the database fills its own gaps, or only the latest.
 - Remote commands: proposed to ride in the ack (`esp32-dev/ambient/FIRMWARE.md`, "Remote commands").
-- Which host runs it, and how it's kept running.

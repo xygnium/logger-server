@@ -25,13 +25,21 @@ It prints each message with its arrival time and sender, and replies `ack <UTC t
 
 ## Decided
 
-- Storage is SQLite on this host, not MariaDB, with the data kept forever. That's roughly 25 to 40 MB a year per logger at 120 s (estimated). Back up with SQLite's `.backup`, not a plain file copy.
+- Storage is SQLite on this host, not MariaDB, with the data kept forever. With one row per reading that's roughly 100 to 150 MB a year for ambient at 120 s (estimated), so a few GB over decades. Back up with SQLite's `.backup`, not a plain file copy.
 - No MQTT for now.
+- One database file. One row per reading, in snake_case:
+
+  ```
+  readings: id, logger_id, timestamp, sensor, data_type, value, status
+  loggers:  logger_id, mac, name, location
+  index:    (logger_id, data_type, timestamp)
+  ```
+
+  `timestamp` is the reading's own UTC time. `data_type` names the measured quantity with its unit, such as `temperature_C`, `humidity_pct` or `pressure_hPa`. `status` is OK or fail. Operations select by time range, and readings from different loggers aren't time-aligned.
 - The loggers push and never listen.
 
 ## Open
 
-- One SQLite file with a table per logger, or a file per logger.
 - Whether each push carries every sample since the last ack, so the database fills its own gaps, or only the latest.
 - Remote commands: proposed to ride in the ack (`esp32-dev/ambient/FIRMWARE.md`, "Remote commands").
 - Which host runs it, and how it's kept running.

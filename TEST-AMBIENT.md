@@ -52,16 +52,7 @@ Two machines are involved:
 
    On the VM, `ls /dev/ttyUSB0` should show the port.
 
-2. Create the credentials file. It's gitignored, so it may not exist yet:
-
-   ```bash
-   cd ~/dev/github/esp32-dev/ambient/main
-   cp wifi_secrets.h.example wifi_secrets.h
-   ```
-
-   Edit `wifi_secrets.h`: set `WIFI_SSID` and `WIFI_PASS` to the network the logger uses, and check that `LISTENER_HOST` is `"192.168.1.88"` and `LISTENER_PORT` is `8080`.
-
-3. Build, flash and open the console:
+2. Build, flash and open the console:
 
    ```bash
    cd ~/dev/github/esp32-dev/ambient
@@ -72,15 +63,14 @@ Two machines are involved:
 
 ## 3. Set the logger up for the test
 
-Type these on the monitor console. Settings are saved in flash and survive a restart.
+Type these on the monitor console. WiFi and the listener come only from these commands; nothing in the build supplies them. Settings are saved in flash, survive a restart and a reflash, and a new board starts with WiFi and the listener `not set`.
 
-1. `config get`, and check:
-   - `listener   192.168.1.88:8080`. If it shows another address, a saved setting from an earlier run is overriding the header: run `config listener 192.168.1.88 8080`.
-   - `wifi` shows the right network.
-2. `config push 2m`: push every 2 minutes instead of hourly.
-3. `quiet off`: show successful pushes on the console too.
-4. `push`: push now.
-5. `status`: expect `wifi connected to ...`, `listener 192.168.1.88:8080`, and the push counts.
+1. `config get`. If `wifi` doesn't show the right network, or shows `not set`, run `config wifi <ssid> <password>`.
+2. If `listener` isn't `192.168.1.88:8080`, run `config listener 192.168.1.88 8080`.
+3. `config push 2m`: push every 2 minutes instead of hourly.
+4. `quiet off`: show successful pushes on the console too.
+5. `push`: push now.
+6. `status`: expect `wifi connected to ...`, `listener 192.168.1.88:8080`, and the push counts.
 
 ## 4. What a pass looks like
 
@@ -99,8 +89,8 @@ Let it run for 30 minutes, about 15 pushes.
 
 | Symptom | Likely cause |
 |---|---|
-| `wifi not connected` | Wrong SSID or password: fix with `config wifi <ssid> <password>` |
-| Logger counts `no reply`, nothing on dev10 | Wrong listener address, server not running, or the dev10 firewall |
+| `wifi not connected` or `not set` | Wrong or missing SSID or password: fix with `config wifi <ssid> <password>` |
+| Logger counts `no reply`, nothing on dev10 | Wrong listener address (check `config get`), server not running, or the dev10 firewall |
 | Lines on dev10, but logger counts `no reply` | The ack isn't getting back to the logger. Note how often, and report it |
 | `send failed` | WiFi dropped at push time; check `reconnects` and `rssi` |
 

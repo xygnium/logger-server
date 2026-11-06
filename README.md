@@ -18,7 +18,7 @@ To test the link with the ambient logger, see [TEST-AMBIENT.md](TEST-AMBIENT.md)
 ./udp_listener.py --port 9000
 ```
 
-It prints each message with a GOOD/OK/BAD/FAULT verdict, its arrival time and sender, and replies `ack <UTC time>`. The verdict is the server's judgement, not the logger's: BAD if pushes were missed (a gap in `seq`), rssi is below -80 dBm, or the message isn't a hello line (FAULT for a fault line instead: the logger is in a hard fault); OK if rssi is below -70 dBm, WiFi reconnected, or the logger restarted; GOOD otherwise. The rules are in the `udp_listener.py` docstring. It doesn't store anything yet.
+It prints each message with a GOOD/OK/BAD/FAULT verdict, its arrival time and sender, and replies `ack <UTC time with milliseconds>`, which the logger uses to correct its clock. The verdict is the server's judgement, not the logger's: BAD if pushes were missed (a gap in `seq`), rssi is below -80 dBm, or the message isn't a hello line (FAULT for a fault line instead: the logger is in a hard fault); OK if rssi is below -70 dBm, WiFi reconnected, or the logger restarted; GOOD otherwise. The rules are in the `udp_listener.py` docstring. It doesn't store anything yet.
 
 ### As a service on dev10
 
@@ -52,7 +52,7 @@ After editing the copy in `~/.config/systemd/user/`, run `systemctl --user daemo
   index:    (logger_id, data_type, timestamp)
   ```
 
-  `timestamp` is the reading's own UTC time. `data_type` names the measured quantity with its unit, such as `temperature_C`, `humidity_pct` or `pressure_hPa`. `status` is OK or fail. Operations select by time range, and readings from different loggers aren't time-aligned.
+  `timestamp` is the reading's own UTC time, with milliseconds, like `2026-11-06T07:10:00.137Z`. `data_type` names the measured quantity with its unit, such as `temperature_C`, `humidity_pct` or `pressure_hPa`. `status` is OK or fail. Operations select by time range, and readings from different loggers aren't time-aligned.
 - The loggers push and never listen.
 - The server runs on dev10 to start with, as a systemd user service.
 

@@ -7,16 +7,18 @@ What the loggers and the server send each other over UDP. This records the curre
 The logger pushes one datagram to the server (default port 8080) at boot and then every push interval. It is ASCII, a single line of `key=value` fields after the word `hello`:
 
 ```
-hello seq=<count> up=<seconds since boot> rssi=<dBm> ap=<access point MAC> ip=<own address> mac=<own MAC> reconnects=<times WiFi was regained> push_s=<interval> vin_mv=<supply voltage, mV; 0 if unavailable>
+hello seq=<count> up=<seconds since boot> rssi=<dBm> ap=<access point MAC> ip=<own address> mac=<own MAC> reconnects=<times WiFi was regained> push_s=<interval> vin_mv=<supply voltage, mV; 0 if unavailable> [clock=unset]
 ```
+
+`clock=unset` appears only after a remediated restart (an invalid DS3231 with an empty card). The line is then a **time request**: it carries no data, and the logger sends it every 10 s until an ack sets its clock.
 
 The server replies to the sender's address and port:
 
 ```
-ack <UTC time as YYYY-MM-DDTHH:MM:SSZ>
+ack <UTC time as YYYY-MM-DDTHH:MM:SS.mmmZ>
 ```
 
-The logger waits 2 s for the ack. A missing ack is counted and logged, and nothing is resent. The ack time is meant for checking the logger's clock (the `clock auto` or `clock report` setting).
+The logger waits 2 s for the ack. A missing ack is counted and logged, and nothing is resent. The logger takes the ack time plus half the round trip as the true time. With `clock auto` it corrects its DS3231 when that's more than 50 ms off; with `clock report` it only shows the offset in `status`. The server's clock must be accurate (dev10's is internet-synced). The logger also accepts an ack without milliseconds.
 
 ### Fault line
 
@@ -24,6 +26,7 @@ While the logger is in a hard fault it sends this in place of the status line, a
 
 ```
 fault sd=<missing|mount_failed|not_responding> seq=<n> up=<seconds since boot> mac=<own MAC>
+fault rtc=<missing|invalid|not_responding> seq=<n> up=<seconds since boot> mac=<own MAC>
 ```
 
 The server acks it like any other message.

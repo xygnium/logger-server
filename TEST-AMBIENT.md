@@ -67,7 +67,7 @@ Type these on the monitor console. WiFi and the listener come only from these co
 
 1. `config get`. If `wifi` doesn't show the right network, or shows `not set`, run `config wifi <ssid> <password>`.
 2. If `listener` isn't `192.168.1.88:8080`, run `config listener 192.168.1.88 8080`.
-3. `config push 2m`: push every 2 minutes instead of hourly.
+3. `config interval 2m 2m`: sample and push every 2 minutes instead of pushing hourly.
 4. `quiet off`: show successful pushes on the console too.
 5. `push`: push now.
 6. `status`: expect `wifi connected to ...`, `listener 192.168.1.88:8080`, and the push counts.
@@ -98,5 +98,5 @@ These causes are guesses until a check confirms them.
 
 ## Afterwards
 
-- To return to hourly pushes: `config push 1h`.
+- To return to hourly pushes: `config interval 2m 1h`.
 - To keep the server running without a terminal, install the service (README, "As a service on dev10"). Stop the hand-started `udp_listener.py` first.

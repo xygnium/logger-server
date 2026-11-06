@@ -5,7 +5,7 @@ Usage:
     ./udp_listener.py              # listen on UDP 8080
     ./udp_listener.py --port 9000
 
-Prints each message with a GOOD/OK/BAD verdict, this host's local arrival
+Prints each message with a GOOD/OK/BAD/FAULT verdict, this host's local arrival
 time and the sender, and replies "ack <UTC time>" so the logger can later
 check its clock against this host. Stop with Ctrl-C.
 
@@ -14,7 +14,9 @@ For a hello line:
     BAD   pushes were missed (seq skipped), or rssi below RSSI_BAD
     OK    rssi below RSSI_OK, WiFi reconnected, or the logger restarted
     GOOD  otherwise
-A message that isn't a parseable hello line is BAD.
+A fault line ("fault <source>=<reason> ...": the logger is in a hard fault
+and has stopped normal work) is FAULT. Any other message that isn't a
+parseable hello line is BAD.
 """
 
 import argparse
@@ -72,10 +74,13 @@ def main():
         text = data.decode("ascii", errors="replace")
         fields = parse_hello(text)
         key = fields.get("mac", addr[0]) if fields else None
-        verdict = judge(fields, last.get(key))
+        if text.startswith("fault "):
+            verdict = "FAULT"
+        else:
+            verdict = judge(fields, last.get(key))
         if fields:
             last[key] = fields
-        print(f"{verdict:<4} {now:%H:%M:%S} {addr[0]}:{addr[1]} {text}",
+        print(f"{verdict:<5} {now:%H:%M:%S} {addr[0]}:{addr[1]} {text}",
               flush=True)
         utc = datetime.datetime.now(datetime.timezone.utc)
         sock.sendto(f"ack {utc:%Y-%m-%dT%H:%M:%SZ}".encode(), addr)

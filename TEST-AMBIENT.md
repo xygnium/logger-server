@@ -40,7 +40,7 @@ Two machines are involved:
    python3 -c "import socket; s=socket.socket(socket.AF_INET, socket.SOCK_DGRAM); s.settimeout(2); s.sendto(b'hello test', ('192.168.1.88', 8080)); print(s.recv(100))"
    ```
 
-   Pass: it prints `b'ack 2026-...Z'`, and the dev10 terminal shows a line ending in `hello test`. A timeout means the server isn't running, the firewall blocks it, or the VM can't reach dev10. Fix that before going on.
+   Pass: it prints `b'ack 2026-...Z'`, and the dev10 terminal shows a line ending in `hello test`. That line is marked `BAD`, since `hello test` isn't a full hello line; that's expected here. A timeout means the server isn't running, the firewall blocks it, or the VM can't reach dev10. Fix that before going on.
 
 ## 2. Firmware on the VM
 
@@ -79,10 +79,10 @@ Let it run for 30 minutes, about 15 pushes.
 - **dev10 terminal:** one line per push, from the logger's IP, like
 
   ```
-  05:41:02 192.168.1.x:xxxxx hello seq=3 up=362 rssi=-58 ap=... ip=... mac=... reconnects=0 push_s=120 vin_mv=...
+  GOOD 05:41:02 192.168.1.x:xxxxx hello seq=3 up=362 rssi=-58 ap=... ip=... mac=... reconnects=0 push_s=120 vin_mv=...
   ```
 
-  `seq` goes up by one each time, and the lines are about 120 s apart.
+  `seq` goes up by one each time, the lines are about 120 s apart, and each starts with `GOOD`. The first line after a logger restart is `OK`. `OK` from weak rssi or a reconnect, or `BAD` from a `seq` gap, needs noting.
 - **Logger `status`:** `pushes ok` matches the number of lines on dev10; `no reply` and `send failed` stay at 0.
 
 ## If it fails

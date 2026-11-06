@@ -18,7 +18,7 @@ To test the link with the ambient logger, see [TEST-AMBIENT.md](TEST-AMBIENT.md)
 ./udp_listener.py --port 9000
 ```
 
-It prints each message with its arrival time and sender, and replies `ack <UTC time>`. It doesn't store anything yet.
+It prints each message with a GOOD/OK/BAD verdict, its arrival time and sender, and replies `ack <UTC time>`. The verdict is the server's judgement, not the logger's: BAD if pushes were missed (a gap in `seq`), rssi is below -80 dBm, or the message isn't a hello line; OK if rssi is below -70 dBm, WiFi reconnected, or the logger restarted; GOOD otherwise. The rules are in the `udp_listener.py` docstring. It doesn't store anything yet.
 
 ### As a service on dev10
 

@@ -18,6 +18,16 @@ ack <UTC time as YYYY-MM-DDTHH:MM:SSZ>
 
 The logger waits 2 s for the ack. A missing ack is counted and logged, and nothing is resent. The ack time is meant for checking the logger's clock (the `clock auto` or `clock report` setting).
 
+### Fault line
+
+While the logger is in a hard fault it sends this in place of the status line, at once when the fault is raised and then every push interval, until it is rebooted:
+
+```
+fault sd=<missing|mount_failed|not_responding> seq=<n> up=<seconds since boot> mac=<own MAC>
+```
+
+The server acks it like any other message.
+
 ## Current: attic (`pico-dev/temp-sense`)
 
 This is the opposite model: the Pico W listens on UDP 8080, and `udp_client.py` polls it. `read` returns one line per DS18B20, keyed by ROM id. `settime YYYY-MM-DD HH:MM:SS D` sets its DS3231. Any other command gets a generic ack. It is likely to change to push, like ambient.

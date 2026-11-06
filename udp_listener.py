@@ -6,7 +6,7 @@ Usage:
     ./udp_listener.py --port 9000
 
 Prints each message with a GOOD/OK/BAD/FAULT verdict, this host's local arrival
-time and the sender, and replies "ack <UTC time>" so the logger can later
+time and the sender, and replies "ack <UTC time, ms>" so the logger can
 check its clock against this host. Stop with Ctrl-C.
 
 The verdict is the server's judgement; the logger only reports numbers.
@@ -83,7 +83,8 @@ def main():
         print(f"{verdict:<5} {now:%H:%M:%S} {addr[0]}:{addr[1]} {text}",
               flush=True)
         utc = datetime.datetime.now(datetime.timezone.utc)
-        sock.sendto(f"ack {utc:%Y-%m-%dT%H:%M:%SZ}".encode(), addr)
+        ms = utc.microsecond // 1000
+        sock.sendto(f"ack {utc:%Y-%m-%dT%H:%M:%S}.{ms:03d}Z".encode(), addr)
 
 
 if __name__ == "__main__":

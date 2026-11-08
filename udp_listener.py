@@ -10,8 +10,11 @@ The logger sends one message at a time and resends it until it's acked:
     data <timestamp,sensor,data_type,value,status>
     event <timestamp,source,event,detail>
 Each is printed with this host's local arrival time, stored (with --db) in
-the readings or events table, and answered with "ack <UTC time, ms>" so the
-logger can check its clock. A message the same as the one before (resent
+the readings or events table, and answered with
+"ack <UTC time, ms> <CRC-16 of the message as received, 4 hex digits>"
+(CRC-16/XMODEM):
+the CRC tells the logger its message arrived intact, and the time lets it
+check its clock. A message the same as the one before (resent
 because an ack was lost) isn't stored again; it becomes an event of our own,
 logserv,repeat,<message>. Stop with Ctrl-C.
 """
@@ -20,6 +23,7 @@ import argparse
 import datetime
 import socket
 import sqlite3
+import binascii
 
 
 def open_db(path):
@@ -67,17 +71,19 @@ def main():
         now = datetime.datetime.now()
         utc = datetime.datetime.now(datetime.timezone.utc)
         ms = utc.microsecond // 1000
+        crc = binascii.crc_hqx(data, 0)
         text = data.decode("ascii", errors="replace").strip()
         if text == last:
             # Resent because our ack was lost: not stored again; logged as
             # logserv's own event instead.
-            text = f"event {utc:%Y-%m-%dT%H:%M:%S}.{ms:03d}Z,logserv,repeat,{text}"
+            store_text = f"event {utc:%Y-%m-%dT%H:%M:%S}.{ms:03d}Z,logserv,repeat,{text}"
         else:
             last = text
-        print(f"{now:%H:%M:%S} {text}", flush=True)
+            store_text = text
+        print(f"{now:%H:%M:%S} {store_text}", flush=True)
         if db:
-            store(db, text)
-        sock.sendto(f"ack {utc:%Y-%m-%dT%H:%M:%S}.{ms:03d}Z".encode(), addr)
+            store(db, store_text)
+        sock.sendto(f"ack {utc:%Y-%m-%dT%H:%M:%S}.{ms:03d}Z {crc:04x}".encode(), addr)
 
 
 if __name__ == "__main__":

@@ -96,6 +96,10 @@ def main():
         if args.verbose or store_text != text or problem:
             print(f"{now:%H:%M:%S} {store_text}"
                   + (f"  [not stored: {problem}]" if problem else ""), flush=True)
+        # The ack's time is read just before sending, after the store, so it
+        # is the time the ack leaves.
+        utc = datetime.datetime.now(datetime.timezone.utc)
+        ms = utc.microsecond // 1000
         sock.sendto(f"ack {utc:%Y-%m-%dT%H:%M:%S}.{ms:03d}Z {crc:04x}".encode(), addr)
 
 

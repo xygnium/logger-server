@@ -7,7 +7,7 @@ Description=Data logger UDP server (logger-server)
 
 [Service]
 WorkingDirectory=%h/dev/github/logger-server
-ExecStart=/usr/bin/python3 -u %h/dev/github/logger-server/udp_listener.py
+ExecStart=/usr/bin/python3 -u %h/dev/github/logger-server/udp_listener.py --db %h/logserv.sqlite
 Restart=on-failure
 RestartSec=5
 

@@ -1,4 +1,4 @@
-# systemd system service for the logger server. Installation: see README.md.
+# systemd system service for the logger server (logserv). Installation: see README.md.
 # Runs as user mike, with the repo cloned at ~/dev/github/logger-server; change
 #   User= and the paths below if not.
 

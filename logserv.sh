@@ -1,11 +1,14 @@
 #!/bin/bash
 # Control logserv, the logger-server systemd system service.
-#   ./logserv.sh install   install or update the service, start it, start at boot
-#                          (re-run after the service file changes)
-#   ./logserv.sh start
-#   ./logserv.sh stop
-#   ./logserv.sh uninstall stop the service and remove it (keeps the database)
-#   ./logserv.sh status    running or not, and the last 20 lines of output
+#   ./logserv.sh install        install or update the service, start it, start at
+#                               boot (re-run after the service file changes)
+#   ./logserv.sh start          (re)start, printing only problems
+#   ./logserv.sh start-verbose  (re)start, printing every message, until the
+#                               next start or reboot
+#   ./logserv.sh stop           stop
+#   ./logserv.sh uninstall      stop the service and remove it (keeps the database)
+#   ./logserv.sh status         running or not, mode, db file, and the last 20 lines of output
+#   ./logserv.sh help           show this list
 set -e
 cd "$(dirname "$0")"
 case "$1" in
@@ -17,7 +20,13 @@ install)
     systemctl --no-pager status logger-server
     ;;
 start)
-    sudo systemctl start logger-server
+    sudo rm -f /run/logserv.env
+    sudo systemctl restart logger-server
+    systemctl --no-pager status logger-server
+    ;;
+start-verbose)
+    echo "LOGSERV_OPTS=--verbose" | sudo tee /run/logserv.env > /dev/null
+    sudo systemctl restart logger-server
     systemctl --no-pager status logger-server
     ;;
 stop)
@@ -32,10 +41,20 @@ uninstall)
     ;;
 status)
     systemctl --no-pager status logger-server || true
+    pid=$(systemctl show -p MainPID --value logger-server)
+    if [ "$pid" != 0 ]; then
+        args=$(ps -o args= -p "$pid")
+        case "$args" in *--verbose*) echo "mode: verbose" ;; *) echo "mode: normal" ;; esac
+        db=$(echo "$args" | sed -n 's/.*--db \([^ ]*\).*/\1/p')
+        echo "db: ${db:-none} $( [ -n "$db" ] && ls -lh "$db" 2>/dev/null | awk '{print "(" $5 ")"}')"
+    fi
     journalctl -u logger-server -n 20 --no-pager
     ;;
+help|-h|--help)
+    sed -n '2,/^set -e/p' "$0" | grep '^#' | sed 's/^# \{0,1\}//'
+    ;;
 *)
-    echo "usage: $0 install|uninstall|start|stop|status"
+    sed -n '2,/^set -e/p' "$0" | grep '^#' | sed 's/^# \{0,1\}//'
     exit 1
     ;;
 esac

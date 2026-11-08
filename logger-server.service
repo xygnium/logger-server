@@ -1,14 +1,17 @@
 # systemd system service for the logger server (logserv). Installation: see README.md.
 # Runs as user mike, with the repo cloned at ~/dev/github/logger-server; change
-#   User= and the paths below if not.
+#   User= and the paths below if not. logserv.sh start-verbose sets
+#   LOGSERV_OPTS=--verbose in /run/logserv.env, which a reboot clears.
 
 [Unit]
 Description=Data logger UDP server (logger-server)
 
 [Service]
 User=mike
+Environment=LOGSERV_OPTS=
+EnvironmentFile=-/run/logserv.env
 WorkingDirectory=/home/mike/dev/github/logger-server
-ExecStart=/usr/bin/python3 -u /home/mike/dev/github/logger-server/udp_listener.py --db /home/mike/logserv.sqlite
+ExecStart=/usr/bin/python3 -u /home/mike/dev/github/logger-server/udp_listener.py --db /home/mike/logserv.sqlite $LOGSERV_OPTS
 Restart=on-failure
 RestartSec=5
 

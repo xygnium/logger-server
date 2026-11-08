@@ -8,6 +8,7 @@ Description=Data logger UDP server (logger-server)
 
 [Service]
 User=mike
+Environment=LOGSERV_OPTS=
 EnvironmentFile=-/run/logserv.env
 WorkingDirectory=/home/mike/dev/github/logger-server
 ExecStart=/usr/bin/python3 -u /home/mike/dev/github/logger-server/udp_listener.py --db /home/mike/logserv.sqlite $LOGSERV_OPTS

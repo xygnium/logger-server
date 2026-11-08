@@ -1,43 +1,37 @@
 # Logger protocol
 
-What the loggers and the server send each other over UDP. This records the current state. The sample format isn't designed yet.
+What the loggers and the server send each other over UDP.
 
 ## Current: ambient (`esp32-dev/ambient`)
 
-The logger pushes one datagram to the server (default port 8080) at boot and then every push interval. It is ASCII, a single line of `key=value` fields after the word `hello`:
+The logger sends one message at a time to the server (UDP 8080) and waits for its ack before sending the next. Each message is one ASCII line:
 
 ```
-hello seq=<count> up=<seconds since boot> rssi=<dBm> ap=<access point MAC> ip=<own address> mac=<own MAC> reconnects=<times WiFi was regained> push_s=<interval> vin_mv=<supply voltage, mV; 0 if unavailable> [clock=unset]
+data <timestamp>,<sensor>,<data_type>,<value>,<status>
+event <timestamp>,<source>,<event>,<detail>
 ```
 
-`clock=unset` appears only after a remediated restart (an invalid DS3231 with an empty card). The line is then a **time request**: it carries no data, and the logger sends it every 10 s until an ack sets its clock.
+- `data` is one reading, e.g. `data 2026-11-07T13:35:48.153Z,sht45,rh_pct,54.00,ok`. A failed reading has an empty value and the reason as the status.
+- `event` is one event, e.g. `event 2026-11-07T13:35:48.153Z,sht45,fail,nack`. The timestamp is empty for an event from before the logger's clock is set.
+- Events go ahead of readings.
 
 The server replies to the sender's address and port:
 
 ```
-ack <UTC time as YYYY-MM-DDTHH:MM:SS.mmmZ>
+ack <UTC time as YYYY-MM-DDTHH:MM:SS.mmmZ> <CRC-16 of the message, 4 hex digits>
 ```
 
-The logger waits 2 s for the ack. A missing ack is counted and logged, and nothing is resent. The logger takes the ack time plus half the round trip as the true time. With `clock auto` it corrects its DS3231 when that's more than 50 ms off; with `clock report` it only shows the offset in `status`. The server's clock must be accurate (dev10's is internet-synced). The logger also accepts an ack without milliseconds.
+- **CRC:** CRC-16/XMODEM of the message as received (Python `binascii.crc_hqx(data, 0)`; ESP32 `esp_rom_crc16_be` from the ROM). A reply without the matching CRC isn't an ack; the logger prints `expected ack failed`.
+- **Time:** read just before the ack is sent. The logger takes it plus half the round trip as the true time, and with `clock auto` corrects its DS3231 when that's more than 50 ms off. The server's clock must be accurate (dev10's is internet-synced).
+- **No ack within 2 s:** the logger sends the same message again every 10 s, forever, until it's acked.
+- **Repeats:** a message the same as the one before (resent because an ack was lost) is acked but not stored again; the server stores its own event instead, `logserv,repeat,<message>`.
 
-### Fault line
-
-While the logger is in a hard fault it sends this in place of the status line, at once when the fault is raised and then every push interval, until it is rebooted:
-
-```
-fault sd=<missing|mount_failed|not_responding> seq=<n> up=<seconds since boot> mac=<own MAC>
-fault rtc=<missing|invalid|not_responding> seq=<n> up=<seconds since boot> mac=<own MAC>
-```
-
-The server acks it like any other message.
+The whole system, and why one row per value, is in `esp32-dev/ambient/SYSTEM.md`.
 
 ## Current: attic (`pico-dev/temp-sense`)
 
-This is the opposite model: the Pico W listens on UDP 8080, and `udp_client.py` polls it. `read` returns one line per DS18B20, keyed by ROM id. `settime YYYY-MM-DD HH:MM:SS D` sets its DS3231. Any other command gets a generic ack. It is likely to change to push, like ambient.
+This is the opposite model: the Pico W listens on UDP 8080, and `udp_client.py` polls it. `read` returns one line per DS18B20, keyed by ROM id. `settime YYYY-MM-DD HH:MM:SS D` sets its DS3231. Any other command gets a generic ack. It is likely to change to sending, like ambient.
 
-## To design
+## Open
 
-- The sample message: fields per logger, a sample timestamp from the logger's RTC, and per-sensor OK or fail flags.
-- Logger identity: the MAC already in the ambient line, or a name setting.
-- Backlog: whether a push carries every sample since the last acked one.
 - Commands in the ack (proposed in `esp32-dev/ambient/FIRMWARE.md`, "Remote commands").

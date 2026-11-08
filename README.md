@@ -1,11 +1,11 @@
 # logger-server
 
-The host-side server for the data loggers. Each logger pushes its readings over UDP; this server acks each push and will store the readings in SQLite.
+The host-side server for the data loggers (logserv). The ambient logger sends each reading and event over UDP; this server acks each one and stores it in SQLite.
 
 | Logger | Firmware | Notes |
 |---|---|---|
-| ambient (outdoor air) | `esp32-dev/ambient` | Pushes a status line; no sensor readings yet |
-| attic | `pico-dev/temp-sense` | Currently listens and is polled; likely to change to push like ambient |
+| ambient (outdoor air) | `esp32-dev/ambient` | Sends each reading and event, one at a time until acked |
+| attic | `pico-dev/temp-sense` | Currently listens and is polled; likely to change to sending like ambient |
 
 The message formats are in [PROTOCOL.md](PROTOCOL.md). It is the shared reference for both firmware repos.
 
@@ -14,48 +14,50 @@ To test the link with the ambient logger, see [TEST-AMBIENT.md](TEST-AMBIENT.md)
 ## Running
 
 ```bash
-./udp_listener.py              # listen on UDP 8080
+./udp_listener.py                       # listen on UDP 8080, ack, don't store
+./udp_listener.py --db ~/logserv.sqlite # also store
 ./udp_listener.py --port 9000
-./udp_listener.py --verbose    # print every message
+./udp_listener.py --verbose             # print every message
 ```
 
 By default it prints only repeats and messages it can't store; `--verbose` prints every message. The rest is in the `udp_listener.py` docstring.
 
 ### As a service on dev10
 
-`logger-server.service` runs it as a systemd system service, as user `mike`, which starts at boot and restarts after a crash. It assumes the repo is cloned at `~/dev/github/logger-server`; edit the file if not. Stop any `udp_listener.py` started by hand first, since only one program can hold port 8080.
+`logger-server.service` runs it as a systemd system service, as user `mike`, storing to `~/logserv.sqlite`. It starts at boot and restarts after a crash. It assumes the repo is cloned at `~/dev/github/logger-server`; edit the file if not. Stop any `udp_listener.py` started by hand first, since only one program can hold port 8080.
 
 ```bash
-sudo cp logger-server.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now logger-server
-journalctl -u logger-server -f        # watch the output
+./logserv.sh install     # install or update the service and (re)start it; also after a git pull
+./logserv.sh status      # running or not, and the last 20 lines of output
+./logserv.sh stop
+./logserv.sh start
+./logserv.sh uninstall   # keeps the database
 ```
 
-After editing the file, repeat the `cp` and `daemon-reload`, then `sudo systemctl restart logger-server`. `logserv.sh install` does all of this.
+### Database
 
-## Status
+Two tables, one row per reading or event:
 
-- `udp_listener.py`, moved from `esp32-dev/ambient`, unchanged apart from its docstring.
-- Not yet written: SQLite storage.
+```
+readings: id, timestamp, sensor, data_type, value, status
+events:   id, timestamp, source, event, detail
+```
+
+`timestamp` is the logger's own UTC time with milliseconds, like `2026-11-06T07:10:00.137Z`. `data_type` names the quantity with its unit: `temp_c`, `rh_pct`, `ratio`, `pressure_pa`. `status` is `ok` or the failure reason, with an empty value. Back up with SQLite's `.backup`, not a plain file copy:
+
+```bash
+sqlite3 ~/logserv.sqlite ".backup ~/logserv-backup.sqlite"
+```
 
 ## Decided
 
-- Storage is SQLite on this host, not MariaDB, with the data kept forever. With one row per reading that's roughly 100 to 150 MB a year for ambient at 120 s (estimated), so a few GB over decades. Back up with SQLite's `.backup`, not a plain file copy.
+- Storage is SQLite on this host, not MariaDB, with the data kept forever. With one row per reading that's roughly 100 to 150 MB a year for ambient at 120 s (estimated), so a few GB over decades.
 - No MQTT for now.
-- One database file. One row per reading, in snake_case:
-
-  ```
-  readings: id, logger_id, timestamp, sensor, data_type, value, status
-  loggers:  logger_id, mac, name, location
-  index:    (logger_id, data_type, timestamp)
-  ```
-
-  `timestamp` is the reading's own UTC time, with milliseconds, like `2026-11-06T07:10:00.137Z`. `data_type` names the measured quantity with its unit, such as `temperature_C`, `humidity_pct` or `pressure_hPa`. `status` is OK or fail. Operations select by time range, and readings from different loggers aren't time-aligned.
-- The loggers push and never listen.
+- One database file, one row per reading (see Database). No logger id: there is one ESP32.
+- The loggers send and never listen.
 - The server runs on dev10 to start with, as a systemd system service.
 
 ## Open
 
-- Whether each push carries every sample since the last ack, so the database fills its own gaps, or only the latest.
+- Readings lost from the logger's RAM queue (reboot, or a full queue) are only on its SD card; nothing copies them over yet.
 - Remote commands: proposed to ride in the ack (`esp32-dev/ambient/FIRMWARE.md`, "Remote commands").

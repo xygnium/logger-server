@@ -1,15 +1,16 @@
-# systemd user service for the logger server. Installation: see README.md.
-# Assumes the repo is cloned at ~/dev/github/logger-server; change the paths
-#   below if it isn't.
+# systemd system service for the logger server. Installation: see README.md.
+# Runs as user mike, with the repo cloned at ~/dev/github/logger-server; change
+#   User= and the paths below if not.
 
 [Unit]
 Description=Data logger UDP server (logger-server)
 
 [Service]
-WorkingDirectory=%h/dev/github/logger-server
-ExecStart=/usr/bin/python3 -u %h/dev/github/logger-server/udp_listener.py --db %h/logserv.sqlite
+User=mike
+WorkingDirectory=/home/mike/dev/github/logger-server
+ExecStart=/usr/bin/python3 -u /home/mike/dev/github/logger-server/udp_listener.py --db /home/mike/logserv.sqlite
 Restart=on-failure
 RestartSec=5
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target

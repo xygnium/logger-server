@@ -16,24 +16,23 @@ To test the link with the ambient logger, see [TEST-AMBIENT.md](TEST-AMBIENT.md)
 ```bash
 ./udp_listener.py              # listen on UDP 8080
 ./udp_listener.py --port 9000
+./udp_listener.py --verbose    # print every message
 ```
 
-It prints each message with a GOOD/OK/BAD/FAULT verdict, its arrival time and sender, and replies `ack <UTC time with milliseconds>`, which the logger uses to correct its clock. The verdict is the server's judgement, not the logger's: BAD if pushes were missed (a gap in `seq`), rssi is below -80 dBm, or the message isn't a hello line (FAULT for a fault line instead: the logger is in a hard fault); OK if rssi is below -70 dBm, WiFi reconnected, or the logger restarted; GOOD otherwise. The rules are in the `udp_listener.py` docstring. It doesn't store anything yet.
+By default it prints only repeats and messages it can't store; `--verbose` prints every message. The rest is in the `udp_listener.py` docstring.
 
 ### As a service on dev10
 
-`logger-server.service` runs it as a systemd user service, which starts at boot and restarts after a crash. It assumes the repo is cloned at `~/dev/github/logger-server`; edit the paths in the file if not. Stop any `udp_listener.py` started by hand first, since only one program can hold port 8080.
+`logger-server.service` runs it as a systemd system service, as user `mike`, which starts at boot and restarts after a crash. It assumes the repo is cloned at `~/dev/github/logger-server`; edit the file if not. Stop any `udp_listener.py` started by hand first, since only one program can hold port 8080.
 
 ```bash
-mkdir -p ~/.config/systemd/user
-cp logger-server.service ~/.config/systemd/user/
-systemctl --user daemon-reload
-systemctl --user enable --now logger-server
-sudo loginctl enable-linger $USER     # start at boot, without a login
-journalctl --user -u logger-server -f # watch the output
+sudo cp logger-server.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now logger-server
+journalctl -u logger-server -f        # watch the output
 ```
 
-After editing the copy in `~/.config/systemd/user/`, run `systemctl --user daemon-reload` and `systemctl --user restart logger-server`.
+After editing the file, repeat the `cp` and `daemon-reload`, then `sudo systemctl restart logger-server`. `logserv.sh install` does all of this.
 
 ## Status
 
@@ -54,7 +53,7 @@ After editing the copy in `~/.config/systemd/user/`, run `systemctl --user daemo
 
   `timestamp` is the reading's own UTC time, with milliseconds, like `2026-11-06T07:10:00.137Z`. `data_type` names the measured quantity with its unit, such as `temperature_C`, `humidity_pct` or `pressure_hPa`. `status` is OK or fail. Operations select by time range, and readings from different loggers aren't time-aligned.
 - The loggers push and never listen.
-- The server runs on dev10 to start with, as a systemd user service.
+- The server runs on dev10 to start with, as a systemd system service.
 
 ## Open
 

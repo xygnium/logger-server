@@ -49,6 +49,8 @@ events:   id, timestamp, source, event, detail
 sqlite3 ~/logserv.sqlite ".backup ~/logserv-backup.sqlite"
 ```
 
+`./logdb.sh` shows the newest readings and events, the readings in the last few minutes, and the failed readings; `./logdb.sh help` lists the commands.
+
 ## Decided
 
 - Storage is SQLite on this host, not MariaDB, with the data kept forever. With one row per reading that's roughly 100 to 150 MB a year for ambient at 120 s (estimated), so a few GB over decades.

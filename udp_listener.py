@@ -14,9 +14,10 @@ Each is stored (with --db) in the readings or events table and answered with
 "ack <UTC time, ms> <CRC-16 of the message as received, 4 hex digits>"
 (CRC-16/XMODEM):
 the CRC tells the logger its message arrived intact, and the time lets it
-check its clock. A message the same as the one before (resent
-because an ack was lost) isn't stored again; it becomes an event of our own,
-logserv,repeat,<message>.
+check its clock. A message already stored (resent because an ack was lost,
+or after a logger reboot) isn't stored again, and is printed as
+"repeat <message>". A reading is the same when its timestamp, sensor and
+data_type match; an event, when all four fields match.
 
 Output, each line with this host's local arrival time: normally only
 repeats and messages that can't be stored (not data or event, or the wrong
@@ -38,24 +39,32 @@ def open_db(path):
     db.execute("""CREATE TABLE IF NOT EXISTS events (
         id INTEGER PRIMARY KEY,
         timestamp TEXT, source TEXT, event TEXT, detail TEXT)""")
+    # A resent message is ignored (INSERT OR IGNORE). This fails if the
+    # database already holds duplicates.
+    db.execute("CREATE UNIQUE INDEX IF NOT EXISTS readings_key"
+               " ON readings (timestamp, sensor, data_type)")
+    db.execute("CREATE UNIQUE INDEX IF NOT EXISTS events_key"
+               " ON events (timestamp, source, event, detail)")
     return db
 
 
 def store(db, text):
-    """Store a data or event message. Raises ValueError for anything else."""
+    """Store a data or event message. False if it was already stored. Raises
+    ValueError for anything else."""
     kind, _, row = text.strip().partition(" ")
     if kind == "data":
         ts, sensor, data_type, value, status = row.split(",")
-        db.execute("INSERT INTO readings (timestamp, sensor, data_type, value, status)"
+        cur = db.execute("INSERT OR IGNORE INTO readings (timestamp, sensor, data_type, value, status)"
                    " VALUES (?,?,?,?,?)",
                    (ts, sensor, data_type, float(value) if value else None, status))
     elif kind == "event":
         ts, source, event, detail = row.split(",", 3)
-        db.execute("INSERT INTO events (timestamp, source, event, detail)"
+        cur = db.execute("INSERT OR IGNORE INTO events (timestamp, source, event, detail)"
                    " VALUES (?,?,?,?)", (ts or None, source, event, detail))
     else:
         raise ValueError("not a data or event message")
     db.commit()
+    return cur.rowcount == 1
 
 
 def main():
@@ -70,7 +79,6 @@ def main():
     sock.bind(("0.0.0.0", args.port))
     print(f"listening on UDP {args.port}", flush=True)
 
-    last = None
     while True:
         data, addr = sock.recvfrom(1024)
         now = datetime.datetime.now()
@@ -78,17 +86,14 @@ def main():
         ms = utc.microsecond // 1000
         crc = binascii.crc_hqx(data, 0)
         text = data.decode("ascii", errors="replace").strip()
-        if text == last:
-            # Resent because our ack was lost: not stored again; logged as
-            # logserv's own event instead.
-            store_text = f"event {utc:%Y-%m-%dT%H:%M:%S}.{ms:03d}Z,logserv,repeat,{text}"
-        else:
-            last = text
-            store_text = text
+        store_text = text
         try:
             if db:
-                store(db, store_text)
-            elif store_text.partition(" ")[0] not in ("data", "event"):
+                if not store(db, text):
+                    # Already stored: resent because our ack was lost, or
+                    # after a logger reboot.
+                    store_text = f"repeat {text}"
+            elif text.partition(" ")[0] not in ("data", "event"):
                 raise ValueError("not a data or event message")
             problem = None
         except ValueError as e:

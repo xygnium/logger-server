@@ -15,7 +15,6 @@ Not built, and nothing is decided yet. This proposes how to get told when the am
 | `clock,unset` | Event | Yes: no sampling until an ack sets the clock |
 | `logger,boot` | Event | Yes: an unexpected reboot points to power or a crash |
 | `clock,corrected` / `stepped` / `set` | Event | No, these are normal |
-| `logserv,repeat` | Event | No: a lost ack that was resent |
 
 Silence covers the logger dead or unpowered, its WiFi down, and logserv itself stopped, since in each case no rows arrive. A 10 min limit works at a 30 s or 2 min sample interval.
 

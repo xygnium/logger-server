@@ -24,7 +24,7 @@ ack <UTC time as YYYY-MM-DDTHH:MM:SS.mmmZ> <CRC-16 of the message, 4 hex digits>
 - **CRC:** CRC-16/XMODEM of the message as received (Python `binascii.crc_hqx(data, 0)`; ESP32 `esp_rom_crc16_be` from the ROM). A reply without the matching CRC isn't an ack; the logger prints `expected ack failed`.
 - **Time:** read just before the ack is sent. The logger takes it plus half the round trip as the true time, and with `clock auto` corrects its DS3231 when that's more than 50 ms off. The server's clock must be accurate (dev10's is internet-synced).
 - **No ack within 2 s:** the logger sends the same message again every 10 s, forever, until it's acked.
-- **Repeats:** a message the same as the one before (resent because an ack was lost) is acked but not stored again; the server stores its own event instead, `logserv,repeat,<message>`.
+- **Repeats:** a message already stored (resent because an ack was lost, or after a logger reboot) is acked but not stored again; the server prints it as `repeat <message>`. A reading is already stored when its timestamp, sensor and data_type match one in the database; an event, when all four fields match.
 
 The whole system, and why one row per value, is in `esp32-dev/ambient/SYSTEM.md`.
 

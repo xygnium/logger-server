@@ -20,7 +20,7 @@ help|*)
 usage: $0 <command> [n]     database: $DB (set LOGSERV_DB to change)
   latest [n]    newest n readings (6, one sample); the newest should be no older than one sample interval
   count [min]   readings in the last min minutes (10); 6 per sample, so 120 at 30 s, 30 at 2 min
-  events [n]    newest n events (10): boots, sensor failures, clock corrections, repeats
+  events [n]    newest n events (10): boots, sensor failures, clock corrections
   bad [n]       newest n readings that aren't ok (10)
   help          this list
 USAGE

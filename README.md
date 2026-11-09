@@ -20,7 +20,7 @@ To test the link with the ambient logger, see [TEST-AMBIENT.md](TEST-AMBIENT.md)
 ./udp_listener.py --verbose             # print every message
 ```
 
-By default it prints only repeats and messages it can't store; `--verbose` prints every message. The rest is in the `udp_listener.py` docstring.
+`udp_listener.py` has a version number (`VERSION`), raised by one with every change to it; `--version` prints it. By default it prints only repeats and messages it can't store; `--verbose` prints every message. The rest is in the `udp_listener.py` docstring.
 
 ### As a service on dev10
 
@@ -29,6 +29,7 @@ By default it prints only repeats and messages it can't store; `--verbose` print
 ```bash
 ./logserv.sh install     # install or update the service and (re)start it; also after a git pull
 ./logserv.sh status      # running or not, and the last 20 lines of output
+./logserv.sh version     # the file's version and the running service's; warns if they differ
 ./logserv.sh stop
 ./logserv.sh start
 ./logserv.sh uninstall   # keeps the database

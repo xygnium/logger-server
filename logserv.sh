@@ -8,6 +8,7 @@
 #   ./logserv.sh stop           stop
 #   ./logserv.sh uninstall      stop the service and remove it (keeps the database)
 #   ./logserv.sh status         running or not, mode, db file, and the last 20 lines of output
+#   ./logserv.sh version        the version of udp_listener.py and of the running service
 #   ./logserv.sh help           show this list
 set -e
 cd "$(dirname "$0")"
@@ -49,6 +50,19 @@ status)
         echo "db: ${db:-none} $( [ -n "$db" ] && ls -lh "$db" 2>/dev/null | awk '{print "(" $5 ")"}')"
     fi
     journalctl -u logger-server -n 20 --no-pager
+    ;;
+version)
+    file=$(./udp_listener.py --version)
+    pid=$(systemctl show -p MainPID --value logger-server)
+    running=none
+    if [ "$pid" != 0 ]; then
+        running=$(journalctl _PID="$pid" -o cat --no-pager | sed -n 's/^listening on .*, version //p' | tail -1)
+    fi
+    echo "file:    ${file}"
+    echo "running: ${running:-unknown}"
+    if [ "$running" != none ] && [ "$running" != "$file" ]; then
+        echo "warning: the service isn't running this file's version; run ./logserv.sh install"
+    fi
     ;;
 help|-h|--help)
     sed -n '2,/^set -e/p' "$0" | grep '^#' | sed 's/^# \{0,1\}//'

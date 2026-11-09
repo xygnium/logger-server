@@ -30,6 +30,9 @@ import socket
 import sqlite3
 import binascii
 
+# Raise by one with every change to this file.
+VERSION = 1
+
 
 def open_db(path):
     db = sqlite3.connect(path)
@@ -72,12 +75,13 @@ def main():
     ap.add_argument("--port", type=int, default=8080)
     ap.add_argument("--db", help="SQLite file to store readings and events in")
     ap.add_argument("--verbose", action="store_true", help="print every message")
+    ap.add_argument("--version", action="version", version=str(VERSION))
     args = ap.parse_args()
 
     db = open_db(args.db) if args.db else None
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind(("0.0.0.0", args.port))
-    print(f"listening on UDP {args.port}", flush=True)
+    print(f"listening on UDP {args.port}, version {VERSION}", flush=True)
 
     while True:
         data, addr = sock.recvfrom(1024)

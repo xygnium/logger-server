@@ -62,5 +62,4 @@ sqlite3 ~/logserv.sqlite ".backup ~/logserv-backup.sqlite"
 
 ## Open
 
-- Readings lost from the logger's RAM queue (reboot, or a full queue) are only on its SD card; nothing copies them over yet.
 - Remote commands: proposed to ride in the ack (`esp32-dev/ambient/FIRMWARE.md`, "Remote commands").
